@@ -49,7 +49,7 @@ func Init() (*Config, error) {
 		ServerConfig{
 			Host:        viper.GetString("SERVER_HOST"),
 			Port:        viper.GetInt("SERVER_PORT"),
-			RequestTime: viper.GetDuration("REQUEST_TIME"),
+			RequestTime: viper.GetDuration("REQUEST_TIME") * time.Second,
 		},
 		PostgresConfig{
 			Host:     viper.GetString("PG_HOST"),
