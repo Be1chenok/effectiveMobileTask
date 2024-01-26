@@ -16,6 +16,7 @@ const keyName = "name"
 type Enrichment interface {
 	GetAgeByName(ctx context.Context, name string) (int, error)
 	GetGenderByName(ctx context.Context, name string) (string, error)
+	GetNationalityByName(ctx context.Context, name string) (string, error)
 }
 
 type enrichment struct {

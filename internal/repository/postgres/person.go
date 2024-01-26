@@ -9,11 +9,11 @@ import (
 )
 
 type Person interface {
-	Find(ctx context.Context, searchParams domain.PersonSearchParams) ([]domain.Person, error)
-	FindById(ctx context.Context, personId int) (domain.Person, error)
-	Add(ctx context.Context, person domain.Person) (int, error)
+	Find(ctx context.Context, searchParams *domain.PersonSearchParams) (*[]domain.Person, error)
+	FindById(ctx context.Context, personId int) (*domain.Person, error)
+	Add(ctx context.Context, person *domain.Person) (int, error)
 	DeleteById(ctx context.Context, personId int) error
-	UpdateById(ctx context.Context, person domain.Person) error
+	UpdateById(ctx context.Context, person *domain.Person) error
 }
 
 type person struct {
@@ -26,7 +26,7 @@ func NewPersonRepo(db *sql.DB) Person {
 	}
 }
 
-func (p person) Find(ctx context.Context, searchParams domain.PersonSearchParams) ([]domain.Person, error) {
+func (p person) Find(ctx context.Context, searchParams *domain.PersonSearchParams) (*[]domain.Person, error) {
 	rows, err := p.db.QueryContext(
 		ctx,
 		`SELECT id, name, surname, patronymic, age, gender, nationality
@@ -50,7 +50,7 @@ func (p person) Find(ctx context.Context, searchParams domain.PersonSearchParams
 	for rows.Next() {
 		var person domain.Person
 		if err := rows.Scan(
-			&person.Id,
+			&person.ID,
 			&person.Name,
 			&person.Surname,
 			&person.Patronymic,
@@ -63,10 +63,10 @@ func (p person) Find(ctx context.Context, searchParams domain.PersonSearchParams
 		persons = append(persons, person)
 	}
 
-	return persons, nil
+	return &persons, nil
 }
 
-func (p person) FindById(ctx context.Context, personId int) (domain.Person, error) {
+func (p person) FindById(ctx context.Context, personId int) (*domain.Person, error) {
 	var person domain.Person
 
 	if err := p.db.QueryRowContext(
@@ -76,7 +76,7 @@ func (p person) FindById(ctx context.Context, personId int) (domain.Person, erro
 		WHERE id = $1`,
 		personId,
 	).Scan(
-		&person.Id,
+		&person.ID,
 		&person.Name,
 		&person.Surname,
 		&person.Patronymic,
@@ -84,13 +84,13 @@ func (p person) FindById(ctx context.Context, personId int) (domain.Person, erro
 		&person.Gender,
 		&person.Nationality,
 	); err != nil {
-		return domain.Person{}, domain.ErrNothingFound
+		return nil, domain.ErrNothingFound
 	}
 
-	return person, nil
+	return &person, nil
 }
 
-func (p person) Add(ctx context.Context, person domain.Person) (int, error) {
+func (p person) Add(ctx context.Context, person *domain.Person) (int, error) {
 	var personId int
 	if err := p.db.QueryRowContext(
 		ctx,
@@ -129,7 +129,7 @@ func (p person) DeleteById(ctx context.Context, personId int) error {
 	return nil
 }
 
-func (p person) UpdateById(ctx context.Context, person domain.Person) error {
+func (p person) UpdateById(ctx context.Context, person *domain.Person) error {
 	result, err := p.db.ExecContext(
 		ctx,
 		`UPDATE persons
@@ -146,7 +146,7 @@ func (p person) UpdateById(ctx context.Context, person domain.Person) error {
 		person.Age,
 		person.Gender,
 		person.Nationality,
-		person.Id,
+		person.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to execute UPDATE query: %w", err)
