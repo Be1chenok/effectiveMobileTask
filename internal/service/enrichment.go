@@ -9,6 +9,8 @@ import (
 
 	"github.com/Be1chenok/effectiveMobileTask/internal/config"
 	"github.com/Be1chenok/effectiveMobileTask/internal/domain"
+	appLogger "github.com/Be1chenok/effectiveMobileTask/pkg/logger"
+	"go.uber.org/zap"
 )
 
 const keyName = "name"
@@ -20,12 +22,14 @@ type Enrichment interface {
 }
 
 type enrichment struct {
-	conf *config.Config
+	conf   *config.Config
+	logger appLogger.Logger
 }
 
-func NewEnrichment(conf *config.Config) Enrichment {
+func NewEnrichment(conf *config.Config, logger appLogger.Logger) Enrichment {
 	return &enrichment{
-		conf: conf,
+		conf:   conf,
+		logger: logger.With(zap.String("component", "service-enrichment")),
 	}
 }
 
@@ -40,6 +44,8 @@ func (e enrichment) GetAgeByName(ctx context.Context, name string) (int, error) 
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return 0, fmt.Errorf("failed to decode JSON data: %w", err)
 	}
+
+	e.logger.Debugf("age: %v", resp.Age)
 
 	if resp.Age < 0 {
 		return 0, domain.ErrAgeNotFound
@@ -60,6 +66,8 @@ func (e enrichment) GetGenderByName(ctx context.Context, name string) (string, e
 		return "", fmt.Errorf("failed to decode JSON data: %w", err)
 	}
 
+	e.logger.Debugf("gender: %v", resp.Gender)
+
 	if resp.Gender == "" {
 		return "", domain.ErrGenderNotFound
 	}
@@ -78,6 +86,8 @@ func (e enrichment) GetNationalityByName(ctx context.Context, name string) (stri
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return "", fmt.Errorf("failed to decode JSON data: %w", err)
 	}
+
+	e.logger.Debugf("nationality: %v", resp.Nationality)
 
 	if len(resp.Nationality) == 0 {
 		return "", domain.ErrNationalityNotFound

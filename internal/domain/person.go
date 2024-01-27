@@ -13,6 +13,6 @@ type Person struct {
 type PersonSearchParams struct {
 	Gender      string
 	Nationality string
-	Offset      int
-	Limit       int
+	Page        int
+	Size        int
 }

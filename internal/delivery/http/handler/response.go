@@ -9,17 +9,24 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
-func writeJsonResponse(w http.ResponseWriter, statusCode int, resp interface{}) {
+type resultResponse struct {
+	Message interface{} `json:"message"`
+}
+
+func writeJsonResponse(w http.ResponseWriter, statusCode int, response interface{}) {
+	resp := resultResponse{
+		Message: response,
+	}
 	w.Header().Set(contentType, applicationJson)
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(resp)
 }
 
 func writeJsonErrorResponse(w http.ResponseWriter, statusCode int, err error) {
-	response := errorResponse{
+	resp := errorResponse{
 		Message: err.Error(),
 	}
 	w.Header().Set(contentType, applicationJson)
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(resp)
 }

@@ -44,8 +44,8 @@ func Run() {
 	pgCancel()
 	appLog.Infof("database connected")
 
-	repository := appRepository.New(postgres)
-	service := appService.New(repository, conf)
+	repository := appRepository.New(logger, postgres)
+	service := appService.New(conf, logger, repository)
 	handler := appHandler.New(conf, logger, service)
 	server := appServer.New(conf, handler.InitRoutes())
 

@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/Be1chenok/effectiveMobileTask/internal/domain"
+	appLogger "github.com/Be1chenok/effectiveMobileTask/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type Person interface {
@@ -17,19 +19,32 @@ type Person interface {
 }
 
 type person struct {
-	db *sql.DB
+	db     *sql.DB
+	logger appLogger.Logger
 }
 
-func NewPersonRepo(db *sql.DB) Person {
+func NewPersonRepo(logger appLogger.Logger, db *sql.DB) Person {
 	return &person{
-		db: db,
+		db:     db,
+		logger: logger.With(zap.String("component", "person-repository")),
 	}
 }
 
 func (p person) Find(ctx context.Context, searchParams *domain.PersonSearchParams) (*[]domain.Person, error) {
+
+	offset := (searchParams.Page - 1) * searchParams.Size
+	p.logger.Debugf("offset: %v", offset)
+
 	rows, err := p.db.QueryContext(
 		ctx,
-		`SELECT id, name, surname, patronymic, age, gender, nationality
+		`SELECT
+		id,
+		name,
+		surname,
+		patronymic,
+		age,
+		gender,
+		nationality
 		FROM persons
 		WHERE gender LIKE $1||'%'
 		AND nationality LIKE $2||'%'
@@ -38,8 +53,8 @@ func (p person) Find(ctx context.Context, searchParams *domain.PersonSearchParam
 		LIMIT $4`,
 		searchParams.Gender,
 		searchParams.Nationality,
-		searchParams.Offset,
-		searchParams.Limit,
+		offset,
+		searchParams.Size,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute SELECT query: %w", err)
@@ -58,9 +73,13 @@ func (p person) Find(ctx context.Context, searchParams *domain.PersonSearchParam
 			&person.Gender,
 			&person.Nationality,
 		); err != nil {
-			return nil, domain.ErrNothingFound
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 		persons = append(persons, person)
+	}
+
+	if len(persons) == 0 {
+		return nil, domain.ErrNothingFound
 	}
 
 	return &persons, nil
@@ -71,7 +90,14 @@ func (p person) FindById(ctx context.Context, personId int) (*domain.Person, err
 
 	if err := p.db.QueryRowContext(
 		ctx,
-		`SELECT id, name, surname, patronymic, age, gender, nationality
+		`SELECT
+		id,
+		name,
+		surname,
+		patronymic,
+		age,
+		gender,
+		nationality
 		FROM persons
 		WHERE id = $1`,
 		personId,
@@ -94,7 +120,14 @@ func (p person) Add(ctx context.Context, person *domain.Person) (int, error) {
 	var personId int
 	if err := p.db.QueryRowContext(
 		ctx,
-		`INSERT INTO persons (name, surname, patronymic, age, gender, nationality) values ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		`INSERT INTO persons (
+		name,
+		surname,
+		patronymic,
+		age,
+		gender,
+		nationality
+		) values ($1, $2, $3, $4, $5, $6) RETURNING id`,
 		person.Name,
 		person.Surname,
 		person.Patronymic,

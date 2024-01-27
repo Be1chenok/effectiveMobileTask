@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Be1chenok/effectiveMobileTask/internal/domain"
 	"github.com/gorilla/mux"
@@ -25,9 +26,10 @@ func (h Handler) FindPersons(w http.ResponseWriter, r *http.Request) {
 	searchParams := domain.PersonSearchParams{
 		Gender:      urlParams.Gender,
 		Nationality: urlParams.Nationality,
-		Offset:      (urlParams.Page - 1) * urlParams.Size,
-		Limit:       urlParams.Size,
+		Page:        urlParams.Page,
+		Size:        urlParams.Size,
 	}
+	h.logger.Debugf("page: %v, size: %v", urlParams.Page, urlParams.Size)
 
 	persons, err := h.service.Person.Find(ctx, &searchParams)
 	if err != nil {
@@ -154,6 +156,9 @@ func (h Handler) UpdatePerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	person.Gender = strings.ToLower(person.Gender)
+	person.Nationality = strings.ToUpper(person.Nationality)
+
 	if err := h.service.Person.UpdateById(ctx, &person); err != nil {
 		if errors.Is(err, domain.ErrNothingUpdated) {
 			writeJsonErrorResponse(w, http.StatusBadRequest, domain.ErrNothingUpdated)
@@ -177,9 +182,12 @@ func getUrlParams(r *http.Request) UrlParams {
 		size = defaultSize
 	}
 
+	gender := strings.ToLower(r.URL.Query().Get("gender"))
+	nationality := strings.ToUpper(r.URL.Query().Get("nationality"))
+
 	return UrlParams{
-		Gender:      r.URL.Query().Get("gender"),
-		Nationality: r.URL.Query().Get("nationality"),
+		Gender:      gender,
+		Nationality: nationality,
 		Page:        page,
 		Size:        size,
 	}

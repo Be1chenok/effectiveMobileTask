@@ -6,6 +6,8 @@ import (
 
 	"github.com/Be1chenok/effectiveMobileTask/internal/domain"
 	"github.com/Be1chenok/effectiveMobileTask/internal/repository/postgres"
+	appLogger "github.com/Be1chenok/effectiveMobileTask/pkg/logger"
+	"go.uber.org/zap"
 )
 
 type Person interface {
@@ -17,33 +19,35 @@ type Person interface {
 }
 
 type person struct {
-	Enrichment
+	enrichment     Enrichment
 	postgresPerson postgres.Person
+	logger         appLogger.Logger
 }
 
-func NewPerson(postgresPerson postgres.Person, enrichment Enrichment) Person {
+func NewPerson(logger appLogger.Logger, postgresPerson postgres.Person, enrichment Enrichment) Person {
 	return &person{
-		Enrichment:     enrichment,
+		enrichment:     enrichment,
 		postgresPerson: postgresPerson,
+		logger:         logger.With(zap.String("component", "service-person")),
 	}
 }
 
 func (p person) Add(ctx context.Context, person *domain.Person) (*domain.Person, error) {
-	age, err := p.Enrichment.GetAgeByName(ctx, person.Name)
+	age, err := p.enrichment.GetAgeByName(ctx, person.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to enrich age: %w", err)
 	}
 
 	person.Age = age
 
-	gender, err := p.Enrichment.GetGenderByName(ctx, person.Name)
+	gender, err := p.enrichment.GetGenderByName(ctx, person.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to enrich gender: %w", err)
 	}
 
 	person.Gender = gender
 
-	nationality, err := p.Enrichment.GetNationalityByName(ctx, person.Name)
+	nationality, err := p.enrichment.GetNationalityByName(ctx, person.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to enrich nationality: %w", err)
 	}
@@ -72,7 +76,7 @@ func (p person) Find(ctx context.Context, searchParams *domain.PersonSearchParam
 func (p person) FindById(ctx context.Context, personID int) (*domain.Person, error) {
 	person, err := p.postgresPerson.FindById(ctx, personID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find person by id")
+		return nil, fmt.Errorf("failed to find person by id: %w", err)
 	}
 
 	return person, nil
